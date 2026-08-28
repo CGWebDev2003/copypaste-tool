@@ -20,6 +20,8 @@ const MARGIN = 16;
 
 let mainWindow;
 
+const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x: workX, y: workY, width: workWidth, height: workHeight } = primaryDisplay.workArea;
@@ -32,6 +34,7 @@ function createWindow() {
     height: WINDOW_HEIGHT,
     x: windowX,
     y: windowY,
+    icon: APP_ICON,
     alwaysOnTop: true,
     resizable: false,
     frame: true,

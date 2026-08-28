@@ -1,6 +1,6 @@
 {
   "name": "pinboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PinBoard – kleines Always-on-Top Fenster unten rechts am Bildschirm für Zwischenablage-Einträge",
   "main": "main.js",
   "scripts": {
@@ -18,7 +18,12 @@
     "appId": "com.example.pinboard",
     "productName": "PinBoard",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     }
   }
 }
