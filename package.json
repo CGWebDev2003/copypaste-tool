@@ -1,6 +1,6 @@
 {
   "name": "pinboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "PinBoard – kleines Always-on-Top Fenster unten rechts am Bildschirm für Zwischenablage-Einträge",
   "main": "main.js",
   "scripts": {
