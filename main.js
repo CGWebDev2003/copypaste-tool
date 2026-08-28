@@ -1,5 +1,7 @@
-const { app, BrowserWindow, screen, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Menu, clipboard, nativeImage } = require('electron');
 const path = require('path');
+
+const MAX_IMAGE_WIDTH = 320;
 
 Menu.setApplicationMenu(null);
 
@@ -74,6 +76,30 @@ ipcMain.on('resize-window', (event, contentHeight) => {
     width: bounds.width,
     height: targetOuterHeight,
   });
+});
+
+ipcMain.handle('read-clipboard', () => {
+  const image = clipboard.readImage();
+  if (!image.isEmpty()) {
+    const size = image.getSize();
+    let outImage = image;
+    if (size.width > MAX_IMAGE_WIDTH) {
+      const ratio = MAX_IMAGE_WIDTH / size.width;
+      outImage = image.resize({ width: MAX_IMAGE_WIDTH, height: Math.round(size.height * ratio) });
+    }
+    return { type: 'image', data: outImage.toDataURL() };
+  }
+
+  const text = clipboard.readText();
+  return { type: 'text', data: text };
+});
+
+ipcMain.handle('write-clipboard', (event, clip) => {
+  if (clip.type === 'image') {
+    clipboard.writeImage(nativeImage.createFromDataURL(clip.data));
+  } else {
+    clipboard.writeText(clip.data);
+  }
 });
 
 app.whenReady().then(() => {

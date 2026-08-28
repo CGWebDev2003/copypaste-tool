@@ -70,6 +70,13 @@
     .clip-actions .copy.copied {
       background: #3a7a4a;
     }
+    .clip img {
+      flex: 1;
+      max-width: 100%;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -86,7 +93,11 @@
     function loadClips() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const parsed = raw ? JSON.parse(raw) : [];
+        // Ältere Versionen speicherten reine Text-Strings statt {type, data}.
+        return parsed.map((clip) =>
+          typeof clip === 'string' ? { type: 'text', data: clip } : clip
+        );
       } catch (err) {
         return [];
       }
@@ -115,14 +126,20 @@
 
     function renderClips() {
       clipsContainer.innerHTML = '';
-      clips.forEach((text, index) => {
+      clips.forEach((clip, index) => {
         const row = document.createElement('div');
         row.className = 'clip';
 
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.readOnly = true;
-        textarea.rows = 1;
+        let contentEl;
+        if (clip.type === 'image') {
+          contentEl = document.createElement('img');
+          contentEl.src = clip.data;
+        } else {
+          contentEl = document.createElement('textarea');
+          contentEl.value = clip.data;
+          contentEl.readOnly = true;
+          contentEl.rows = 1;
+        }
 
         const actions = document.createElement('div');
         actions.className = 'clip-actions';
@@ -132,7 +149,7 @@
         copyBtn.title = 'Kopieren';
         copyBtn.textContent = '📋';
         copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(text).then(() => {
+          window.electronAPI.writeClipboard(clip).then(() => {
             copyBtn.classList.add('copied');
             setTimeout(() => copyBtn.classList.remove('copied'), 600);
           });
@@ -150,40 +167,34 @@
 
         actions.appendChild(copyBtn);
         actions.appendChild(deleteBtn);
-        row.appendChild(textarea);
+        row.appendChild(contentEl);
         row.appendChild(actions);
         clipsContainer.appendChild(row);
 
-        requestAnimationFrame(() => autoResize(textarea));
+        if (clip.type === 'image') {
+          contentEl.addEventListener('load', syncWindowSize);
+        } else {
+          requestAnimationFrame(() => autoResize(contentEl));
+        }
       });
 
       syncWindowSize();
     }
 
-    function addClip(text) {
-      const trimmed = text.trim();
-      if (!trimmed) return;
-      clips.unshift(trimmed);
+    function addClip(clip) {
+      if (!clip) return;
+      if (clip.type === 'text' && !clip.data.trim()) return;
+      if (clip.type === 'image' && !clip.data) return;
+      clips.unshift(clip);
       saveClips(clips);
       renderClips();
     }
-
-    newEntry.addEventListener('paste', () => {
-      setTimeout(() => {
-        if (newEntry.value.trim()) {
-          addClip(newEntry.value);
-          newEntry.value = '';
-          autoResize(newEntry);
-          syncWindowSize();
-        }
-      }, 0);
-    });
 
     newEntry.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         if (newEntry.value.trim()) {
-          addClip(newEntry.value);
+          addClip({ type: 'text', data: newEntry.value });
           newEntry.value = '';
           autoResize(newEntry);
           syncWindowSize();
@@ -198,12 +209,14 @@
 
     document.addEventListener('keydown', (event) => {
       const isPasteShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v';
-      if (!isPasteShortcut || event.target === newEntry) return;
+      if (!isPasteShortcut) return;
 
       event.preventDefault();
-      navigator.clipboard.readText().then((text) => {
-        if (text && text.trim()) {
-          addClip(text);
+      window.electronAPI.readClipboard().then((clip) => {
+        addClip(clip);
+        if (event.target === newEntry) {
+          newEntry.value = '';
+          autoResize(newEntry);
         }
       }).catch((err) => {
         console.error('Zwischenablage konnte nicht gelesen werden:', err);
