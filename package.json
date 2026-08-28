@@ -1,0 +1,24 @@
+{
+  "name": "copypaste-tool",
+  "version": "1.0.0",
+  "description": "Kleines Always-on-Top Fenster unten rechts am Bildschirm",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-reloader": "^1.2.3"
+  },
+  "build": {
+    "appId": "com.example.copypastetool",
+    "productName": "CopyPasteTool",
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
