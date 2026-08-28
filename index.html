@@ -196,6 +196,20 @@
       syncWindowSize();
     });
 
+    document.addEventListener('keydown', (event) => {
+      const isPasteShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v';
+      if (!isPasteShortcut || event.target === newEntry) return;
+
+      event.preventDefault();
+      navigator.clipboard.readText().then((text) => {
+        if (text && text.trim()) {
+          addClip(text);
+        }
+      }).catch((err) => {
+        console.error('Zwischenablage konnte nicht gelesen werden:', err);
+      });
+    });
+
     renderClips();
     autoResize(newEntry);
     syncWindowSize();
