@@ -11,33 +11,92 @@
       font-family: -apple-system, "Segoe UI", Arial, sans-serif;
       background: #1e1e1e;
       color: #f0f0f0;
-      user-select: none;
     }
-    .container {
+    .app {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
       height: 100%;
       box-sizing: border-box;
-      padding: 16px;
-      text-align: center;
     }
-    h1 {
-      font-size: 16px;
-      margin: 0 0 8px 0;
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: #2a2a2a;
+      border-bottom: 1px solid #3a3a3a;
     }
-    p {
+    .toolbar button {
+      background: #3a3a3a;
+      color: #f0f0f0;
+      border: none;
+      border-radius: 4px;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .toolbar button:hover {
+      background: #4a4a4a;
+    }
+    .toolbar input {
+      flex: 1;
+      background: #1e1e1e;
+      color: #f0f0f0;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 0 8px;
       font-size: 13px;
-      color: #b0b0b0;
-      margin: 0;
+    }
+    webview {
+      flex: 1;
+      width: 100%;
+      background: #ffffff;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>CopyPasteTool</h1>
-    <p>Fenster ist immer im Vordergrund.</p>
+  <div class="app">
+    <div class="toolbar">
+      <button id="back" title="Zurück">&#8592;</button>
+      <button id="forward" title="Vorwärts">&#8594;</button>
+      <button id="reload" title="Neu laden">&#8635;</button>
+      <input id="url" type="text" value="https://www.google.com" />
+    </div>
+    <webview id="browser" src="https://www.google.com"></webview>
   </div>
+
+  <script>
+    const webview = document.getElementById('browser');
+    const urlInput = document.getElementById('url');
+
+    function normalizeUrl(value) {
+      const trimmed = value.trim();
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return 'https://' + trimmed;
+    }
+
+    urlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        webview.src = normalizeUrl(urlInput.value);
+      }
+    });
+
+    webview.addEventListener('did-navigate', () => {
+      urlInput.value = webview.getURL();
+    });
+    webview.addEventListener('did-navigate-in-page', () => {
+      urlInput.value = webview.getURL();
+    });
+
+    document.getElementById('back').addEventListener('click', () => {
+      if (webview.canGoBack()) webview.goBack();
+    });
+    document.getElementById('forward').addEventListener('click', () => {
+      if (webview.canGoForward()) webview.goForward();
+    });
+    document.getElementById('reload').addEventListener('click', () => {
+      webview.reload();
+    });
+  </script>
 </body>
 </html>

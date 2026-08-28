@@ -1,8 +1,16 @@
 const { app, BrowserWindow, screen } = require('electron');
 const path = require('path');
 
-const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 200;
+if (!app.isPackaged) {
+  try {
+    require('electron-reloader')(module);
+  } catch (err) {
+    console.error('electron-reloader failed to start:', err);
+  }
+}
+
+const WINDOW_WIDTH = 400;
+const WINDOW_HEIGHT = 500;
 const MARGIN = 16;
 
 let mainWindow;
@@ -28,6 +36,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
     },
   });
 
