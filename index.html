@@ -7,7 +7,6 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       font-family: -apple-system, "Segoe UI", Arial, sans-serif;
       background: #1e1e1e;
       color: #f0f0f0;
@@ -15,88 +14,219 @@
     .app {
       display: flex;
       flex-direction: column;
-      height: 100%;
       box-sizing: border-box;
-    }
-    .toolbar {
-      display: flex;
-      gap: 6px;
       padding: 8px;
-      background: #2a2a2a;
-      border-bottom: 1px solid #3a3a3a;
+      gap: 8px;
     }
-    .toolbar button {
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #2a2a2a;
+      color: #f0f0f0;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: none;
+      overflow: hidden;
+    }
+    .new-entry {
+      border-color: #4a4a4a;
+    }
+    .new-entry:focus {
+      outline: none;
+      border-color: #5a9bd4;
+    }
+    .clip {
+      display: flex;
+      align-items: stretch;
+      gap: 6px;
+    }
+    .clip textarea {
+      flex: 1;
+    }
+    .clip-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .clip-actions button {
       background: #3a3a3a;
       color: #f0f0f0;
       border: none;
       border-radius: 4px;
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      flex: 1;
       cursor: pointer;
       font-size: 14px;
     }
-    .toolbar button:hover {
+    .clip-actions button:hover {
       background: #4a4a4a;
     }
-    .toolbar input {
+    .clip-actions .delete:hover {
+      background: #7a3a3a;
+    }
+    .clip-actions .copy.copied {
+      background: #3a7a4a;
+    }
+    .clip img {
       flex: 1;
-      background: #1e1e1e;
-      color: #f0f0f0;
+      max-width: 100%;
       border: 1px solid #3a3a3a;
       border-radius: 4px;
-      padding: 0 8px;
-      font-size: 13px;
-    }
-    webview {
-      flex: 1;
-      width: 100%;
-      background: #ffffff;
+      display: block;
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div class="toolbar">
-      <button id="back" title="Zurück">&#8592;</button>
-      <button id="forward" title="Vorwärts">&#8594;</button>
-      <button id="reload" title="Neu laden">&#8635;</button>
-      <input id="url" type="text" value="https://www.google.com" />
-    </div>
-    <webview id="browser" src="https://www.google.com"></webview>
+  <div class="app" id="app">
+    <textarea id="new-entry" class="new-entry" rows="1" placeholder="Text hier einfügen…"></textarea>
+    <div id="clips"></div>
   </div>
 
   <script>
-    const webview = document.getElementById('browser');
-    const urlInput = document.getElementById('url');
+    const STORAGE_KEY = 'copypaste-tool-clips';
+    const newEntry = document.getElementById('new-entry');
+    const clipsContainer = document.getElementById('clips');
 
-    function normalizeUrl(value) {
-      const trimmed = value.trim();
-      if (/^https?:\/\//i.test(trimmed)) return trimmed;
-      return 'https://' + trimmed;
+    function loadClips() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        // Ältere Versionen speicherten reine Text-Strings statt {type, data}.
+        return parsed.map((clip) =>
+          typeof clip === 'string' ? { type: 'text', data: clip } : clip
+        );
+      } catch (err) {
+        return [];
+      }
     }
 
-    urlInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        webview.src = normalizeUrl(urlInput.value);
+    function saveClips(clips) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(clips));
+    }
+
+    function autoResize(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    const app = document.getElementById('app');
+
+    function syncWindowSize() {
+      requestAnimationFrame(() => {
+        if (window.electronAPI) {
+          window.electronAPI.resizeWindow(app.scrollHeight);
+        }
+      });
+    }
+
+    let clips = loadClips();
+
+    function renderClips() {
+      clipsContainer.innerHTML = '';
+      clips.forEach((clip, index) => {
+        const row = document.createElement('div');
+        row.className = 'clip';
+
+        let contentEl;
+        if (clip.type === 'image') {
+          contentEl = document.createElement('img');
+          contentEl.src = clip.data;
+        } else {
+          contentEl = document.createElement('textarea');
+          contentEl.value = clip.data;
+          contentEl.readOnly = true;
+          contentEl.rows = 1;
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'clip-actions';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy';
+        copyBtn.title = 'Kopieren';
+        copyBtn.textContent = '📋';
+        copyBtn.addEventListener('click', () => {
+          window.electronAPI.writeClipboard(clip).then(() => {
+            copyBtn.classList.add('copied');
+            setTimeout(() => copyBtn.classList.remove('copied'), 600);
+          });
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete';
+        deleteBtn.title = 'Löschen';
+        deleteBtn.textContent = '🗑';
+        deleteBtn.addEventListener('click', () => {
+          clips.splice(index, 1);
+          saveClips(clips);
+          renderClips();
+        });
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(deleteBtn);
+        row.appendChild(contentEl);
+        row.appendChild(actions);
+        clipsContainer.appendChild(row);
+
+        if (clip.type === 'image') {
+          contentEl.addEventListener('load', syncWindowSize);
+        } else {
+          requestAnimationFrame(() => autoResize(contentEl));
+        }
+      });
+
+      syncWindowSize();
+    }
+
+    function addClip(clip) {
+      if (!clip) return;
+      if (clip.type === 'text' && !clip.data.trim()) return;
+      if (clip.type === 'image' && !clip.data) return;
+      clips.unshift(clip);
+      saveClips(clips);
+      renderClips();
+    }
+
+    newEntry.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        if (newEntry.value.trim()) {
+          addClip({ type: 'text', data: newEntry.value });
+          newEntry.value = '';
+          autoResize(newEntry);
+          syncWindowSize();
+        }
       }
     });
 
-    webview.addEventListener('did-navigate', () => {
-      urlInput.value = webview.getURL();
-    });
-    webview.addEventListener('did-navigate-in-page', () => {
-      urlInput.value = webview.getURL();
+    newEntry.addEventListener('input', () => {
+      autoResize(newEntry);
+      syncWindowSize();
     });
 
-    document.getElementById('back').addEventListener('click', () => {
-      if (webview.canGoBack()) webview.goBack();
+    document.addEventListener('keydown', (event) => {
+      const isPasteShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v';
+      if (!isPasteShortcut) return;
+
+      event.preventDefault();
+      window.electronAPI.readClipboard().then((clip) => {
+        addClip(clip);
+        if (event.target === newEntry) {
+          newEntry.value = '';
+          autoResize(newEntry);
+        }
+      }).catch((err) => {
+        console.error('Zwischenablage konnte nicht gelesen werden:', err);
+      });
     });
-    document.getElementById('forward').addEventListener('click', () => {
-      if (webview.canGoForward()) webview.goForward();
-    });
-    document.getElementById('reload').addEventListener('click', () => {
-      webview.reload();
-    });
+
+    renderClips();
+    autoResize(newEntry);
+    syncWindowSize();
+    newEntry.focus();
   </script>
 </body>
 </html>
