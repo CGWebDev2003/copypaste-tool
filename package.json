@@ -1,7 +1,7 @@
 {
-  "name": "copypaste-tool",
+  "name": "pinboard",
   "version": "1.0.0",
-  "description": "Kleines Always-on-Top Fenster unten rechts am Bildschirm",
+  "description": "PinBoard – kleines Always-on-Top Fenster unten rechts am Bildschirm für Zwischenablage-Einträge",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -15,8 +15,8 @@
     "electron-reloader": "^1.2.3"
   },
   "build": {
-    "appId": "com.example.copypastetool",
-    "productName": "CopyPasteTool",
+    "appId": "com.example.pinboard",
+    "productName": "PinBoard",
     "win": {
       "target": "nsis"
     }
